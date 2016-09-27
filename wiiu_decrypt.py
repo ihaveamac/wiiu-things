@@ -8,20 +8,20 @@
 
 import binascii
 import glob
-import hashlib
 import itertools
 import math
 import os
 import struct
 import sys
 from Crypto.Cipher import AES
+from Crypto.Hash import SHA1
 
 # put the common key here to decrypt things
 wiiu_common_key = ""
 
 ##########################
 
-wiiu_common_key_hash = hashlib.sha1(wiiu_common_key.encode('utf-8').upper())
+wiiu_common_key_hash = SHA1.new(wiiu_common_key.encode('utf-8').upper())
 if wiiu_common_key_hash.hexdigest() != 'e3fbc19d1306f6243afe852ab35ed9e1e4777d3a':
     sys.exit("Wrong Wii U Common Key. Place the correct one in the script.")
 
@@ -56,9 +56,10 @@ with open(glob.glob("tmd*")[0], "rb") as tmd:
         tmd.seek(0xB08 + (0x30 * c))
         content_index = tmd.read(0x2)
         tmd.seek(0xB0A + (0x30 * c))
-        content_type = tmd.read(0x2)
+        content_type = struct.unpack(">H", tmd.read(0x2))[0]
         tmd.seek(0xB0C + (0x30 * c))
         content_size = struct.unpack(">Q", tmd.read(0x8))[0]
+        # content_size = os.path.getsize(content_id)
         tmd.seek(0xB14 + (0x30 * c))
         content_hash = tmd.read(0x14)
         contents.append([content_id, content_index, content_type, content_size, content_hash])
@@ -83,23 +84,19 @@ cipher_titlekey = AES.new(ckey, AES.MODE_CBC, title_id + (b"\0" * 8))
 decrypted_titlekey = cipher_titlekey.decrypt(encrypted_titlekey)
 print("Decrypted Titlekey:     " + binascii.hexlify(decrypted_titlekey).decode('utf-8').upper())
 
-do_hash = True  # this is disabled after hashing the first content
 for c in contents:
     print("Decrypting {}...".format(c[0]))
     cipher_content = AES.new(decrypted_titlekey, AES.MODE_CBC, c[1] + (b"\0" * 14))
-    content_hash = hashlib.sha1()
+    content_hash = SHA1.new()
     left = c[3]  # set to current size
 
-    # actually for those that have .h3 files, the hash in the tmd is of the h3
-    # but what's in the h3 then? it's usually the length of one or two SHA-1 hashes
-    # but I don't know what exactly it's a hash of yet
     with open(c[0], "rb") as encrypted:
         with open(c[0] + ".dec", "wb") as decrypted:
             for __ in itertools.repeat(0, int(math.floor((c[3] / readsize)) + 1)):
                 to_read = min(readsize, left)
                 tmp_enc = encrypted.read(to_read)
                 tmp_dec = cipher_content.decrypt(tmp_enc)
-                if do_hash:
+                if not c[2] & 0x2:
                     content_hash.update(tmp_dec)
                 decrypted.write(tmp_dec)
                 left -= readsize
@@ -107,12 +104,13 @@ for c in contents:
                 if left <= 0:
                     print("")
                     break
-    if do_hash:
-        if c[4] == content_hash.digest():
-            print("Hash valid!")
-        else:
-            print("Hash mismatch!")
-            print(" > TMD:    " + binascii.hexlify(c[3]).decode('utf-8').upper())
-            print(" > Result: " + content_hash.hexdigest().upper())
+    if c[2] & 0x2:
+        with open(c[0] + ".h3", "rb") as h3:
+            content_hash.update(h3.read())
 
-    #do_hash = False
+    if c[4] == content_hash.digest():
+        print("{} Hash valid".format("Content" if c[2] & 0x2 else "H3"))
+    else:
+        print("Hash mismatch!")
+        print(" > TMD:    " + binascii.hexlify(c[4]).decode('utf-8').upper())
+        print(" > Result: " + content_hash.hexdigest().upper())
