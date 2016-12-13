@@ -16,8 +16,8 @@ if len(sys.argv) == 1:
 # things to not try and download cetk for
 app_categories = {
     '0000',  # application
+    '0002',  # demo
     '000C',  # DLC
-    # do demos go here as well? 0002
 }
 
 tid = sys.argv[1].upper()
@@ -60,13 +60,14 @@ def download(url, printprogress=False, outfile=None):
         return ct
 
 sysbase = "http://nus.cdn.c.shop.nintendowifi.net/ccs/download/" + tid
-# appbase = "http://ccs.cdn.c.shop.nintendowifi.net/ccs/download/" + tid
+appbase = "http://ccs.cdn.c.shop.nintendowifi.net/ccs/download/" + tid
 
 os.makedirs(tid, exist_ok=True)
-base = sysbase
-if tid[4:8].upper() not in app_categories:
+base = appbase
+if tid[4:8] not in app_categories:
+    base = sysbase
     print("Downloading CETK...")
-    with open(tid + "/cetk", "wb") as f:
+    with open(tid + "/title.tik", "wb") as f:
         download(base + "/cetk", False, f)
 
 print("Downloading TMD...")
@@ -80,18 +81,21 @@ for c in range(count):
         # content ID
         binascii.hexlify(tmd[0xB04 + (0x30 * c):0xB04 + (0x30 * c) + 0x4]).decode('utf-8'),
         # content type
-        struct.unpack(">H", tmd[0xB0A + (0x30 * c):0xB0A + (0x30 * c) + 0x2])[0]
+        struct.unpack(">H", tmd[0xB0A + (0x30 * c):0xB0A + (0x30 * c) + 0x2])[0],
+        # content size
+        struct.unpack(">Q", tmd[0xB0C + (0x30 * c):0xB0C + (0x30 * c) + 0x8])[0],
     ])
-with open(tid + "/tmd", "wb") as f:
+with open(tid + "/title.tmd", "wb") as f:
     f.write(tmd)
 
 for c in contents:
-    print("Downloading: {}...".format(c[0]))
-    with open(tid + "/" + c[0], "wb") as f:
-        download(base + "/" + c[0], True, f)
+    if os.path.isfile(tid + "/" + c[0] + ".app") and os.path.getsize(tid + "/" + c[0] + ".app") == c[2]:
+        print("Skipping {}.app due to existing file with proper size".format(c[0]))
+    else:
+        print("Downloading: {}...".format(c[0]))
+        with open(tid + "/" + c[0] + ".app", "wb") as f:
+            download(base + "/" + c[0], True, f)
     if c[1] & 0x2:
-        # I have no idea what a .h3 file does yet but it's 20/40/??? bytes long
-        # probably contains SHA-1 hashes of...something
         print("Downloading: {}.h3...".format(c[0]))
         with open(tid + "/" + c[0] + ".h3", "wb") as f:
             download(base + "/" + c[0] + ".h3", True, f)
