@@ -29,7 +29,7 @@ ckey = binascii.unhexlify(wiiu_common_key)
 
 readsize = 8 * 1024 * 1024
 
-if not os.path.isfile("tmd"):
+if not os.path.isfile("title.tmd"):
     sys.exit("No TMD was found.")
 
 
@@ -43,7 +43,7 @@ def showprogress(val, maxval):
 title_id = b""
 contents = []
 content_count = 0
-with open(glob.glob("tmd*")[0], "rb") as tmd:
+with open(glob.glob("title.tmd*")[0], "rb") as tmd:
     tmd.seek(0x18C)
     title_id = tmd.read(0x8)
     tmd.seek(0x1DE)
@@ -68,8 +68,8 @@ print("Title ID:               " + binascii.hexlify(title_id).decode('utf-8').up
 
 # find encrypted titlekey
 encrypted_titlekey = b""
-if os.path.isfile("cetk"):
-    with open("cetk", "rb") as cetk:
+if os.path.isfile("title.tik"):
+    with open("title.tik", "rb") as cetk:
         cetk.seek(0x1BF)
         encrypted_titlekey = cetk.read(0x10)
 elif len(sys.argv) > 1:
@@ -90,8 +90,8 @@ for c in contents:
     content_hash = SHA1.new()
     left = c[3]  # set to current size
 
-    with open(c[0], "rb") as encrypted:
-        with open(c[0] + ".dec", "wb") as decrypted:
+    with open(c[0] + ".app", "rb") as encrypted:
+        with open(c[0] + ".app.dec", "wb") as decrypted:
             for __ in itertools.repeat(0, int(math.floor((c[3] / readsize)) + 1)):
                 to_read = min(readsize, left)
                 tmp_enc = encrypted.read(to_read)
