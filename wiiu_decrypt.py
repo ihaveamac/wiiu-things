@@ -30,7 +30,7 @@ ckey = binascii.unhexlify(wiiu_common_key)
 readsize = 8 * 1024 * 1024
 
 if not os.path.isfile("title.tmd"):
-    sys.exit("No TMD was found.")
+    sys.exit("No TMD (title.tmd) was found.")
 
 
 def showprogress(val, maxval):
@@ -75,7 +75,7 @@ if os.path.isfile("title.tik"):
 elif len(sys.argv) > 1:
     encrypted_titlekey = binascii.unhexlify(sys.argv[1])
 else:
-    sys.exit("Missing cetk. Please add an argument containing the encrypted titlekey.")
+    sys.exit("Missing CETK (title.tik). Please add an argument containing the encrypted titlekey.")
 
 print("Encrypted Titlekey:     " + binascii.hexlify(encrypted_titlekey).decode('utf-8').upper())
 
@@ -88,7 +88,7 @@ for c in contents:
     print("Decrypting {}...".format(c[0]))
     cipher_content = AES.new(decrypted_titlekey, AES.MODE_CBC, c[1] + (b"\0" * 14))
     content_hash = SHA1.new()
-    left = c[3]  # set to current size
+    left = os.path.getsize(c[0] + ".app")  # set to current size
 
     with open(c[0] + ".app", "rb") as encrypted:
         with open(c[0] + ".app.dec", "wb") as decrypted:
