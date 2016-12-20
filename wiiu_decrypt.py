@@ -92,7 +92,8 @@ print("Decrypted Titlekey:     " + binascii.hexlify(decrypted_titlekey).decode('
 
 for c in contents:
     print("Decrypting {}...".format(c[0]))
-    left = os.path.getsize(c[0] + ".app")  # set to current size
+    left = os.path.getsize(c[0] + ".app")  # set to file size
+    left_hash = c[3]  # set to tmd size (can differ to filesize)
 
     if c[2] & 0x2:  # if has a hash tree
         chunk_count = left // 0x10000
@@ -156,13 +157,16 @@ for c in contents:
             with open(c[0] + ".app.dec", "wb") as decrypted:
                 for __ in range(int(math.floor((c[3] / readsize)) + 1)):
                     to_read = min(readsize, left)
+                    to_read_hash = min(readsize, left_hash)
                     encrypted_content = encrypted.read(to_read)
                     decrypted_content = cipher_content.decrypt(encrypted_content)
-                    if not c[2] & 0x2:
-                        content_hash.update(decrypted_content)
+                    content_hash.update(decrypted_content[0:to_read_hash])
                     decrypted.write(decrypted_content)
                     left -= readsize
+                    left_hash -= readsize
                     show_progress(c[3] - left, c[3])
+                    if left_hash < 0:
+                        left_hash = 0
                     if left <= 0:
                         print("")
                         break
