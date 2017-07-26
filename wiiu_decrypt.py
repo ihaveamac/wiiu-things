@@ -14,7 +14,8 @@ import math
 import os
 import struct
 import sys
-from Crypto.Cipher import AES
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 # put the common key here to decrypt things
 wiiu_common_key = ''
@@ -22,7 +23,6 @@ wiiu_common_key = ''
 ##########################
 
 wiiu_common_key_hash = hashlib.sha1(wiiu_common_key.encode('utf-8').upper())
-print(wiiu_common_key_hash.hexdigest())
 if wiiu_common_key_hash.hexdigest() != 'e3fbc19d1306f6243afe852ab35ed9e1e4777d3a':
     sys.exit('Wrong Wii U Common Key. Place the correct one in the script.')
 
@@ -96,8 +96,8 @@ else:
 print('Encrypted Titlekey:     ' + encrypted_titlekey.hex().upper())
 
 # decryption fun
-cipher_titlekey = AES.new(ckey, AES.MODE_CBC, title_id + (b'\0' * 8))
-decrypted_titlekey = cipher_titlekey.decrypt(encrypted_titlekey)
+cipher_titlekey = Cipher(algorithms.AES(ckey), modes.CBC(title_id + bytes(8)), backend=default_backend()).decryptor()
+decrypted_titlekey = cipher_titlekey.update(encrypted_titlekey) + cipher_titlekey.finalize()
 print('Decrypted Titlekey:     ' + decrypted_titlekey.hex().upper())
 
 for c in contents:
@@ -125,8 +125,8 @@ for c in contents:
                 for chunk_num in range(chunk_count):
                     show_chunk(chunk_num, chunk_count, c[0])
                     # decrypt and verify hash tree
-                    cipher_hash_tree = AES.new(decrypted_titlekey, AES.MODE_CBC, (b'\0' * 16))
-                    hash_tree = cipher_hash_tree.decrypt(encrypted.read(0x400))
+                    cipher_hash_tree = Cipher(algorithms.AES(decrypted_titlekey), modes.CBC(bytes(16)), backend=default_backend()).decryptor()
+                    hash_tree = cipher_hash_tree.update(encrypted.read(0x400)) + cipher_hash_tree.finalize()
                     h0_hashes = hash_tree[0:0x140]
                     h1_hashes = hash_tree[0x140:0x280]
                     h2_hashes = hash_tree[0x280:0x3c0]
@@ -143,8 +143,8 @@ for c in contents:
                         print('\rH2 Hashes invalid in chunk {}'.format(chunk_num))
 
                     iv = h0_hash[0:0x10]
-                    cipher_content = AES.new(decrypted_titlekey, AES.MODE_CBC, iv)
-                    decrypted_data = cipher_content.decrypt(encrypted.read(0xFC00))
+                    cipher_content = Cipher(algorithms.AES(decrypted_titlekey), modes.CBC(iv), backend=default_backend()).decryptor()
+                    decrypted_data = cipher_content.update(encrypted.read(0xFC00)) + cipher_content.finalize()
                     if hashlib.sha1(decrypted_data).digest() != h0_hash:
                         print('\rData block hash invalid in chunk {}'.format(chunk_num))
                     decrypted.write(hash_tree + decrypted_data)
@@ -161,7 +161,7 @@ for c in contents:
                         h3_hash_num += 1
                 print('')
     else:
-        cipher_content = AES.new(decrypted_titlekey, AES.MODE_CBC, c[1] + (b'\0' * 14))
+        cipher_content = Cipher(algorithms.AES(decrypted_titlekey), modes.CBC(c[1] + bytes(14)), backend=default_backend()).decryptor()
         content_hash = hashlib.sha1()
         with open(c[0] + '.app', 'rb') as encrypted:
             with open(c[0] + '.app.dec', 'wb') as decrypted:
@@ -170,7 +170,7 @@ for c in contents:
                     to_read_hash = min(readsize, left_hash)
 
                     encrypted_content = encrypted.read(to_read)
-                    decrypted_content = cipher_content.decrypt(encrypted_content)
+                    decrypted_content = cipher_content.update(encrypted_content)
                     content_hash.update(decrypted_content[0:to_read_hash])
                     decrypted.write(decrypted_content)
                     left -= readsize
@@ -182,6 +182,7 @@ for c in contents:
                     if left <= 0:
                         print('')
                         break
+        cipher_content.finalize()
         if c[4] != content_hash.digest():
             print('Content Hash mismatch!')
             print(' > TMD:    ' + c[4].hex().upper())

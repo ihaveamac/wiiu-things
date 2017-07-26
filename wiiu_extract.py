@@ -32,6 +32,7 @@ def iterate_directory(f, iter_start, count, names_offset, depth, topdir, content
     i = iter_start
 
     while i < count:
+        entry_offset = f.tell()
         f_type = ord(f.read(1))
         isdir = f_type & 1
 
@@ -62,7 +63,7 @@ def iterate_directory(f, iter_start, count, names_offset, depth, topdir, content
         # to_print += ' (flags=0x{:X}) (cindex=0x{:04X}) (cid=0x{})'.format(f_flags, content_index, content_records[content_index][0].upper())
         to_print = ''
         if '--dump-info' in sys.argv:
-            to_print += '{:05} type={:02X} flags={:03X} offs={:010X} realoffs={:010X} size={:07X} cindex={:04X} cid={} '.format(i, f_type, f_flags, f_offset, f_real_offset, f_size, content_index, content_records[content_index][0].upper())
+            to_print += '{:05} entryO={:08X} type={:02X} flags={:03X} O={:010X} realO={:010X} size={:08X} cidx={:04X} cid={} '.format(i, entry_offset, f_type, f_flags, f_offset, f_real_offset, f_size, content_index, content_records[content_index][0].upper())
         if '--full-paths' in sys.argv:
             to_print += ''.join(tree) + f_name
         else:
@@ -74,10 +75,12 @@ def iterate_directory(f, iter_start, count, names_offset, depth, topdir, content
             if f_offset <= topdir:
                 return
             tree.append(f_name + '/')
-            os.makedirs(''.join(tree), exist_ok=True)
+            if can_extract and '--no-extract' not in sys.argv:
+                os.makedirs(''.join(tree), exist_ok=True)
             iterate_directory(f, i + 1, f_size, names_offset, depth + 1, f_offset, content_records, can_extract, tree=tree)
             del tree[-1]
             i = f_size - 1
+
         elif can_extract and '--no-extract' not in sys.argv:
             # why nintendo?
             with open(content_records[content_index][0] + '.app.dec', 'rb') as c:
@@ -140,30 +143,26 @@ with open('title.tmd', 'rb') as f:
         exh_size = read_int(s, 4)
         exh_count = read_int(s, 4)
 
-        print('exheader size: 0x{:X}'.format(exh_size))
+        print('unknown: 0x{:X}'.format(exh_size))
         print('exheader count: {}'.format(exh_count))
 
-        if exh_size == 0x20:
-            s.seek(0x14, 1)
+        s.seek(0x14, 1)
 
-            for i in range(exh_count):
-                print('#{0} ({0:X})'.format(i))
-                print('- Unknown1: 0x' + s.read(4).hex())
-                print('- Unknown2: 0x' + s.read(4).hex())
-                print('- TitleID:  0x' + s.read(8).hex())
-                print('- GroupID:  0x' + s.read(4).hex())
-                print('- Flags?:   0x' + s.read(2).hex())
-                print('')
-                s.seek(0xA, 1)
+        for i in range(exh_count):
+            print('#{0} ({0:X})'.format(i))
+            print('- DiscOffset?: 0x' + s.read(4).hex())
+            print('- Unknown2:    0x' + s.read(4).hex())
+            print('- TitleID:     0x' + s.read(8).hex())
+            print('- GroupID:     0x' + s.read(4).hex())
+            print('- Flags?:      0x' + s.read(2).hex())
+            print('')
+            s.seek(10, 1)
 
-            # what is this again?
-            fsestart = s.tell()
-            s.seek(8, 1)
-            total_entries = read_int(s, 4)
-            s.seek(4, 1)
-            names_offset = fsestart + (total_entries * 0x10)
+        # what is this again?
+        file_entries_offset = s.tell()
+        s.seek(8, 1)
+        total_entries = read_int(s, 4)
+        s.seek(4, 1)
+        names_offset = file_entries_offset + (total_entries * 0x10)
 
-            iterate_directory(s, 1, total_entries, names_offset, 0, -1, contents, can_extract)
-
-        else:
-            sys.exit('invalid exheader size: 0x{:X}'.format(exh_size))
+        iterate_directory(s, 1, total_entries, names_offset, 0, -1, contents, can_extract)
