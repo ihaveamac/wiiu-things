@@ -120,68 +120,66 @@ for c in contents:
         h2_hash_num = 0
         h3_hash_num = 0
 
-        with open(c[0] + '.app', 'rb') as encrypted:
-            with open(c[0] + '.app.dec', 'wb') as decrypted:
-                for chunk_num in range(chunk_count):
-                    show_chunk(chunk_num, chunk_count, c[0])
-                    # decrypt and verify hash tree
-                    cipher_hash_tree = Cipher(algorithms.AES(decrypted_titlekey), modes.CBC(bytes(16)), backend=default_backend()).decryptor()
-                    hash_tree = cipher_hash_tree.update(encrypted.read(0x400)) + cipher_hash_tree.finalize()
-                    h0_hashes = hash_tree[0:0x140]
-                    h1_hashes = hash_tree[0x140:0x280]
-                    h2_hashes = hash_tree[0x280:0x3c0]
+        with open(c[0] + '.app', 'rb') as encrypted, open(c[0] + '.app.dec', 'wb') as decrypted:
+            for chunk_num in range(chunk_count):
+                show_chunk(chunk_num, chunk_count, c[0])
+                # decrypt and verify hash tree
+                cipher_hash_tree = Cipher(algorithms.AES(decrypted_titlekey), modes.CBC(bytes(16)), backend=default_backend()).decryptor()
+                hash_tree = cipher_hash_tree.update(encrypted.read(0x400)) + cipher_hash_tree.finalize()
+                h0_hashes = hash_tree[0:0x140]
+                h1_hashes = hash_tree[0x140:0x280]
+                h2_hashes = hash_tree[0x280:0x3c0]
 
-                    h0_hash = h0_hashes[(h0_hash_num * 0x14):((h0_hash_num + 1) * 0x14)]
-                    h1_hash = h1_hashes[(h1_hash_num * 0x14):((h1_hash_num + 1) * 0x14)]
-                    h2_hash = h2_hashes[(h2_hash_num * 0x14):((h2_hash_num + 1) * 0x14)]
-                    h3_hash = h3_hashes[(h3_hash_num * 0x14):((h3_hash_num + 1) * 0x14)]
-                    if hashlib.sha1(h0_hashes).digest() != h1_hash:
-                        print('\rH0 Hashes invalid in chunk {}'.format(chunk_num))
-                    if hashlib.sha1(h1_hashes).digest() != h2_hash:
-                        print('\rH1 Hashes invalid in chunk {}'.format(chunk_num))
-                    if hashlib.sha1(h2_hashes).digest() != h3_hash:
-                        print('\rH2 Hashes invalid in chunk {}'.format(chunk_num))
+                h0_hash = h0_hashes[(h0_hash_num * 0x14):((h0_hash_num + 1) * 0x14)]
+                h1_hash = h1_hashes[(h1_hash_num * 0x14):((h1_hash_num + 1) * 0x14)]
+                h2_hash = h2_hashes[(h2_hash_num * 0x14):((h2_hash_num + 1) * 0x14)]
+                h3_hash = h3_hashes[(h3_hash_num * 0x14):((h3_hash_num + 1) * 0x14)]
+                if hashlib.sha1(h0_hashes).digest() != h1_hash:
+                    print('\rH0 Hashes invalid in chunk {}'.format(chunk_num))
+                if hashlib.sha1(h1_hashes).digest() != h2_hash:
+                    print('\rH1 Hashes invalid in chunk {}'.format(chunk_num))
+                if hashlib.sha1(h2_hashes).digest() != h3_hash:
+                    print('\rH2 Hashes invalid in chunk {}'.format(chunk_num))
 
-                    iv = h0_hash[0:0x10]
-                    cipher_content = Cipher(algorithms.AES(decrypted_titlekey), modes.CBC(iv), backend=default_backend()).decryptor()
-                    decrypted_data = cipher_content.update(encrypted.read(0xFC00)) + cipher_content.finalize()
-                    if hashlib.sha1(decrypted_data).digest() != h0_hash:
-                        print('\rData block hash invalid in chunk {}'.format(chunk_num))
-                    decrypted.write(hash_tree + decrypted_data)
+                iv = h0_hash[0:0x10]
+                cipher_content = Cipher(algorithms.AES(decrypted_titlekey), modes.CBC(iv), backend=default_backend()).decryptor()
+                decrypted_data = cipher_content.update(encrypted.read(0xFC00)) + cipher_content.finalize()
+                if hashlib.sha1(decrypted_data).digest() != h0_hash:
+                    print('\rData block hash invalid in chunk {}'.format(chunk_num))
+                decrypted.write(hash_tree + decrypted_data)
 
-                    h0_hash_num += 1
-                    if h0_hash_num >= 16:
-                        h0_hash_num = 0
-                        h1_hash_num += 1
-                    if h1_hash_num >= 16:
-                        h1_hash_num = 0
-                        h2_hash_num += 1
-                    if h2_hash_num >= 16:
-                        h2_hash_num = 0
-                        h3_hash_num += 1
-                print('')
+                h0_hash_num += 1
+                if h0_hash_num >= 16:
+                    h0_hash_num = 0
+                    h1_hash_num += 1
+                if h1_hash_num >= 16:
+                    h1_hash_num = 0
+                    h2_hash_num += 1
+                if h2_hash_num >= 16:
+                    h2_hash_num = 0
+                    h3_hash_num += 1
+            print('')
     else:
         cipher_content = Cipher(algorithms.AES(decrypted_titlekey), modes.CBC(c[1] + bytes(14)), backend=default_backend()).decryptor()
         content_hash = hashlib.sha1()
-        with open(c[0] + '.app', 'rb') as encrypted:
-            with open(c[0] + '.app.dec', 'wb') as decrypted:
-                for __ in range(int(math.floor((c[3] / readsize)) + 1)):
-                    to_read = min(readsize, left)
-                    to_read_hash = min(readsize, left_hash)
+        with open(c[0] + '.app', 'rb') as encrypted, open(c[0] + '.app.dec', 'wb') as decrypted:
+            for __ in range(int(math.floor((c[3] / readsize)) + 1)):
+                to_read = min(readsize, left)
+                to_read_hash = min(readsize, left_hash)
 
-                    encrypted_content = encrypted.read(to_read)
-                    decrypted_content = cipher_content.update(encrypted_content)
-                    content_hash.update(decrypted_content[0:to_read_hash])
-                    decrypted.write(decrypted_content)
-                    left -= readsize
-                    left_hash -= readsize
+                encrypted_content = encrypted.read(to_read)
+                decrypted_content = cipher_content.update(encrypted_content)
+                content_hash.update(decrypted_content[0:to_read_hash])
+                decrypted.write(decrypted_content)
+                left -= readsize
+                left_hash -= readsize
 
-                    show_progress(c[3] - left, c[3], c[0])
-                    if left_hash < 0:
-                        left_hash = 0
-                    if left <= 0:
-                        print('')
-                        break
+                show_progress(c[3] - left, c[3], c[0])
+                if left_hash < 0:
+                    left_hash = 0
+                if left <= 0:
+                    print('')
+                    break
         cipher_content.finalize()
         if c[4] != content_hash.digest():
             print('Content Hash mismatch!')
