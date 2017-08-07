@@ -57,10 +57,6 @@ def iterate_directory(f, iter_start, count, names_offset, depth, topdir, content
         has_hash_tree = contents[content_index][2] & 2
         f_real_offset = file_chunk_offset(f_offset) if has_hash_tree else f_offset
 
-        # to_print = '{:05} ({:02X}) '.format(i, f_type) + ('  ' * depth) + ('* ' if isdir else '- ') + f_name
-        # if not isdir:
-        #     to_print += ' (offs=0x{:X} realoffs=0x{:X} size=0x{:X})'.format(f_offset, file_chunk_offset(f_offset), f_size)
-        # to_print += ' (flags=0x{:X}) (cindex=0x{:04X}) (cid=0x{})'.format(f_flags, content_index, content_records[content_index][0].upper())
         to_print = ''
         if '--dump-info' in sys.argv:
             to_print += '{:05} entryO={:08X} type={:02X} flags={:03X} O={:010X} realO={:010X} size={:08X} cidx={:04X} cid={} '.format(i, entry_offset, f_type, f_flags, f_offset, f_real_offset, f_size, content_index, content_records[content_index][0].upper())
@@ -83,21 +79,20 @@ def iterate_directory(f, iter_start, count, names_offset, depth, topdir, content
 
         elif can_extract and '--no-extract' not in sys.argv:
             # why nintendo?
-            with open(content_records[content_index][0] + '.app.dec', 'rb') as c:
-                with open(''.join(tree) + f_name, 'wb') as o:
-                    c.seek(f_real_offset)
-                    buf = b''
-                    left = f_size
-                    while left > 0:
-                        to_read = min(0x20, left)
-                        buf += c.read(to_read)
-                        left -= to_read
-                        if len(buf) >= 0x200:
-                            o.write(buf)
-                            buf = b''
-                        if has_hash_tree and c.tell() % 0x10000 < 0x400:
-                            c.seek(0x400, 1)
-                    o.write(buf)
+            with open(content_records[content_index][0] + '.app.dec', 'rb') as c, open(''.join(tree) + f_name, 'wb') as o:
+                c.seek(f_real_offset)
+                buf = b''
+                left = f_size
+                while left > 0:
+                    to_read = min(0x20, left)
+                    buf += c.read(to_read)
+                    left -= to_read
+                    if len(buf) >= 0x200:
+                        o.write(buf)
+                        buf = b''
+                    if has_hash_tree and c.tell() % 0x10000 < 0x400:
+                        c.seek(0x400, 1)
+                o.write(buf)
 
         i += 1
 
