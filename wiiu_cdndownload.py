@@ -97,6 +97,9 @@ for c in range(count):
 with open(tid + '/title.tmd', 'wb') as f:
     f.write(tmd)
 
+total_size = sum(c[2] for c in contents)
+print("Total size: 0x{:X} ({} MiB)".format(total_size, total_size / (1024 ** 2)))
+
 print('Writing cert (title.cert)...')
 with open(tid + '/title.cert', 'wb') as f:
     f.write(zlib.decompress(base64.b64decode(titlecert)))
