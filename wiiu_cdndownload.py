@@ -44,7 +44,7 @@ def roundup(x, base=64):
 blocksize = 10 * 1024
 
 
-def download(url, printprogress=False, outfile=None, message=''):
+def download(url, printprogress=False, outfile=None, message_prefix='', message_suffix=''):
     cn = urlopen(url)
     totalsize = int(cn.headers['content-length'])
     totalread = 0
@@ -56,7 +56,7 @@ def download(url, printprogress=False, outfile=None, message=''):
         totalread += toread
         if printprogress:
             percent = min(totalread * 1e2 / totalsize, 1e2)
-            print('\r{:29} {:>5.1f}% {:>10} / {}'.format(message, percent, totalread, totalsize), end='')
+            print('\r{:29} {:>5.1f}% {:>10} / {:>10} {}'.format(message_prefix, percent, totalread, totalsize, message_suffix), end='')
         if outfile:
             outfile.write(co)
         else:
@@ -109,7 +109,7 @@ for c in contents:
         print('Skipping {}.app due to existing file with proper size'.format(c[0]))
     else:
         with open(tid + '/' + c[0] + '.app', 'wb') as f:
-            download(base + '/' + c[0], True, f, 'Downloading: {}.app...'.format(c[0]))
+            download(base + '/' + c[0], True, f, 'Downloading: {}.app...'.format(c[0]), '({}) MiB)'.format(c[2] / (1024 ** 2)))
     if c[1] & 0x2:
         with open(tid + '/' + c[0] + '.h3', 'wb') as f:
             download(base + '/' + c[0] + '.h3', True, f, 'Downloading: {}.h3...'.format(c[0]))

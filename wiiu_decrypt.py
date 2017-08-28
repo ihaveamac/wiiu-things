@@ -37,13 +37,13 @@ if not os.path.isfile('title.tmd'):
 def show_progress(val, maxval, cid):
     # crappy workaround I bet, but print() didn't do what I wanted
     minval = min(val, maxval)
-    sys.stdout.write('\rDecrypting {}...  {:>5.1f}% {:>10} / {}'.format(cid, (minval / maxval) * 100, minval, maxval))
+    sys.stdout.write('\rDecrypting {}...  {:>5.1f}% {:>10} / {:>10} ({} MiB)'.format(cid, (minval / maxval) * 100, minval, maxval, maxval / (1024 ** 2)))
     sys.stdout.flush()
 
 
 def show_chunk(num, count, cid):
     # crappy workaround I bet, but print() didn't do what I wanted
-    sys.stdout.write('\rDecrypting {}...  Chunk {:>5} / {:>5}'.format(cid, num + 1, count))
+    sys.stdout.write('\rDecrypting {}...  Chunk  {:>10} / {:>10} ({} MiB)'.format(cid, num + 1, count, (count * 0x10000) / (1024 ** 2)))
     sys.stdout.flush()
 
 
