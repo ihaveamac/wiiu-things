@@ -45,11 +45,8 @@ def iterate_directory(f, iter_start, count, names_offset, depth, topdir, content
         f_offset = read_int(f, 4)
         f_size = read_int(f, 4)
         f_flags = read_int(f, 2)
-        if f_flags & 4:
+        if not f_flags & 4:
             f_offset <<= 5
-
-        if not isdir and not f_flags & 4:
-            f_offset *= 0x20
 
         content_index = read_int(f, 2)
 
