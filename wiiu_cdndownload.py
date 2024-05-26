@@ -67,8 +67,8 @@ def download(url, printprogress=False, outfile=None, message_prefix='', message_
         return ct
 
 
-sysbase = 'http://nus.cdn.c.shop.nintendowifi.net/ccs/download/' + tid
-appbase = 'http://ccs.cdn.c.shop.nintendowifi.net/ccs/download/' + tid
+sysbase = 'http://nus.cdn.wup.shop.nintendo.net/ccs/download/' + tid
+appbase = 'http://ccs.cdn.wup.shop.nintendo.net/ccs/download/' + tid
 
 os.makedirs(tid, exist_ok=True)
 base = appbase
