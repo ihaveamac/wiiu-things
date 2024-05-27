@@ -17,14 +17,18 @@ import sys
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-# put the common key here to decrypt things
-wiiu_common_key = ''
+try:
+    with open(os.path.expanduser('~/.wiiu/common-key'), 'r') as f:
+        # to allow for spaces in the hex text
+        wiiu_common_key = f.read(32).strip().replace(' ', '')
+except FileNotFoundError:
+    sys.exit('Please set the Wii U common key at the file ~/.wiiu/common-key.')
 
 ##########################
 
 wiiu_common_key_hash = hashlib.sha1(wiiu_common_key.encode('utf-8').upper())
 if wiiu_common_key_hash.hexdigest() != 'e3fbc19d1306f6243afe852ab35ed9e1e4777d3a':
-    sys.exit('Wrong Wii U Common Key. Place the correct one in the script.')
+    sys.exit('Wrong Wii U Common Key. Place the correct one at the file ~/.wiiu/common-key.')
 
 ckey = binascii.unhexlify(wiiu_common_key)
 

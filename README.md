@@ -5,6 +5,7 @@ Things I made (or found?) when playing around with the Wii U
 
 * `wiiu_cdndownload.py` - download titles from Nintendo CDN, including cetk (ticket) for system titles/game updates/etc
 * `wiiu_decrypt.py` - decrypt titles from Nintendo CDN; requires Wii U Common Key, plus given encrypted titlekey if there is no cetk file
+  * Requires the common key placed at ~/.wiiu/common-key (plain text hex string)
 * `wiiu_extract.py` - extract contents from titles
   * `--dump-info` - print lots more info
   * `--full-paths` - show full paths in output
